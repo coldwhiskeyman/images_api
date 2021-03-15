@@ -1,4 +1,5 @@
 import os
+import threading
 
 from flask import Flask, request, send_file
 from flask_restful import Api, Resource
@@ -19,6 +20,7 @@ class Images(Resource):
             return {'message': 'Обработка файла не завершена'}
         else:
             path = os.path.join(UPLOAD_FOLDER, filename)
+            del FILES_IN_WORK[filename]
             return send_file(path)
 
     def post(self):
@@ -27,6 +29,7 @@ class Images(Resource):
             return {'message': 'Не найден файл для загрузки'}, 400
         else:
             file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+            threading.Thread(target=process_image, args=(file.filename,)).start()
             return {'message': 'Файл успешно загружен'}, 201
 
 
