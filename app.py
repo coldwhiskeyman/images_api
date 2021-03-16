@@ -2,9 +2,10 @@ import os
 import threading
 
 from flask import Flask, request, send_file
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource, reqparse
 
-from image_processing import FILES_IN_WORK, process_image
+from database import Image
+from image_processing import process_image
 
 UPLOAD_FOLDER = 'media'
 
@@ -13,14 +14,15 @@ api = Api(app)
 
 
 class Images(Resource):
-    def get(self, filename):
-        if filename not in FILES_IN_WORK:
+    def get(self, img_id):
+        file = Image.get(id=img_id)
+        if not file:
             return {'message': 'Файл не найден'}, 404
-        elif not FILES_IN_WORK[filename]:
+        elif not file.complete:
             return {'message': 'Обработка файла не завершена'}
         else:
-            path = os.path.join(UPLOAD_FOLDER, filename)
-            del FILES_IN_WORK[filename]
+            path = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.delete()
             return send_file(path)
 
     def post(self):
@@ -29,11 +31,15 @@ class Images(Resource):
             return {'message': 'Не найден файл для загрузки'}, 400
         else:
             file.save(os.path.join(UPLOAD_FOLDER, file.filename))
-            threading.Thread(target=process_image, args=(file.filename,)).start()
-            return {'message': 'Файл успешно загружен'}, 201
+            img_id = Image.store_image(file.filename)
+            threading.Thread(target=process_image, args=(img_id,)).start()
+            return {
+                        'message': 'Файл успешно загружен',
+                        'img_id': img_id,
+                   }, 201
 
 
-api.add_resource(Images, '/images', '/images/<filename>')
+api.add_resource(Images, '/images', '/images/<int:img_id>')
 
 
 if __name__ == '__main__':

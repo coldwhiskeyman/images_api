@@ -1,9 +1,8 @@
 import time
 
-FILES_IN_WORK = {}
+from database import Image
 
 
-def process_image(filename):
-    FILES_IN_WORK[filename] = False
+def process_image(img_id):
     time.sleep(5)
-    FILES_IN_WORK[filename] = True
+    Image.process_complete(img_id)
